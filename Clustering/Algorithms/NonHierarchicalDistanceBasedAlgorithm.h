@@ -7,6 +7,7 @@
 @property (nonatomic, strong) NSMutableArray *items;
 @property (nonatomic, readwrite, assign) NSInteger maxDistanceAtZoom;
 
+- (void)removeItem:(id <GClusterItem>) item;
 - (id)initWithMaxDistanceAtZoom:(NSInteger)maxDistanceAtZoom;
 
 @end

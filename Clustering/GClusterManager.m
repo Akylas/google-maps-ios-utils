@@ -36,6 +36,14 @@
     [algo addItem:item];
 }
 
+- (void)removeItem:(id <GClusterItem>) item fromAlgorithm:(id <GClusterAlgorithm>)algo {
+    [algo removeItem:item];
+}
+
+-(BOOL)containsItem:(id<GClusterItem>)item inAlgorithm:(id <GClusterAlgorithm>)algo{
+    return [algo containsItem:item];
+}
+
 - (void)removeItems {
     [_clusterAlgorithmSet enumerateObjectsUsingBlock:^(id <GClusterAlgorithm> set, BOOL *stop) {
         [set removeItems];
@@ -52,6 +60,14 @@
 -(void)clusterAlgo:(id <GClusterAlgorithm>)clusterAlgorithm
 {
     [_clusterRenderer clustersChanged:clusterAlgorithm forZoom:_zoom];
+}
+
+- (void)hideItemsNotInVisibleBounds{
+    GMSCoordinateBounds *bounds = [[GMSCoordinateBounds alloc]initWithRegion:self.mapView.projection.visibleRegion];
+    [_clusterAlgorithmSet enumerateObjectsUsingBlock:^(id <GClusterAlgorithm> set, BOOL *stop) {
+        [set hideItemsNotInBounds:bounds];
+    }];
+    [self cluster];
 }
 
 - (void)cluster {
@@ -72,11 +88,16 @@
 }
 
 - (void)mapView:(GMSMapView *)mapView didChangeCameraPosition:(GMSCameraPosition *)cameraPosition {
+    
+
     CGFloat newZoom = floorf([cameraPosition zoom]);
     if (_zoom != newZoom) {
         _zoom = newZoom;
-        
-        [self cluster];
+        [self hideItemsNotInVisibleBounds];
+    } else {
+        [NSObject cancelPreviousPerformRequestsWithTarget:self
+                                                 selector:@selector(hideItemsNotInVisibleBounds) object:nil];
+        [self performSelector:@selector(hideItemsNotInVisibleBounds) withObject:nil afterDelay:0.3];
     }
     if ([self delegate] != nil
         && [self.delegate respondsToSelector:@selector(mapView:didChangeCameraPosition:)]) {

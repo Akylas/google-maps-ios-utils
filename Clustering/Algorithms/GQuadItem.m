@@ -15,6 +15,10 @@ SphericalMercatorProjection* sProjection;
     return sProjection;
 }
 
+- (id)item{
+    return _item;
+}
+
 - (id)initWithItem:(id <GClusterItem>)clusterItem {
     if (self = [super init]) {
 

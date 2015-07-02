@@ -15,7 +15,10 @@
 - (void)addItem:(id <GClusterItem>) item inAlgorithm:(id <GClusterAlgorithm>)algo;
 - (void)removeItems;
 - (void)removeItemsNotInRectangle:(CGRect)rect;
+- (void)hideItemsNotInVisibleBounds;
 
+- (void)removeItem:(id <GClusterItem>) item;
+- (BOOL)containsItem:(id <GClusterItem>) item;
 - (void)cluster;
 -(void)clusterAlgo:(id <GClusterAlgorithm>)clusterAlgorithm;
 
