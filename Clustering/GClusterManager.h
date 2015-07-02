@@ -8,20 +8,21 @@
 
 @property(nonatomic, strong) GMSMapView *mapView;
 @property(nonatomic, weak) id<GMSMapViewDelegate> delegate;
-@property(nonatomic, strong) id<GClusterAlgorithm> clusterAlgorithm;
+//@property(nonatomic, strong) id<GClusterAlgorithm> clusterAlgorithm;
 @property(nonatomic, strong) id<GClusterRenderer> clusterRenderer;
 @property(nonatomic, strong) NSMutableArray *items;
 
-- (void)addItem:(id <GClusterItem>) item;
+- (void)addItem:(id <GClusterItem>) item inAlgorithm:(id <GClusterAlgorithm>)algo;
 - (void)removeItems;
 - (void)removeItemsNotInRectangle:(CGRect)rect;
 
 - (void)cluster;
+-(void)clusterAlgo:(id <GClusterAlgorithm>)clusterAlgorithm;
 
-//convenience
+- (void)addClusterAlgorithm:(id <GClusterAlgorithm>)clusterAlgorithm;
+- (void)removeClusterAlgorithm:(id <GClusterAlgorithm>)clusterAlgorithm;
 
 + (instancetype)managerWithMapView:(GMSMapView*)googleMap
-                         algorithm:(id<GClusterAlgorithm>)algorithm
                           renderer:(id<GClusterRenderer>)renderer;
 
 @end

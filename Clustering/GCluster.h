@@ -8,6 +8,6 @@
 
 @property(nonatomic, strong, readonly) NSSet *items;
 
-@property(nonatomic, strong) GMSMarker *marker;
+@property(nonatomic, readonly) GMSMarker *marker;
 
 @end

@@ -8,9 +8,11 @@
 
 #import <Foundation/Foundation.h>
 #import <GoogleMaps/GoogleMaps.h>
+#import "GClusterAlgorithm.h"
 
 @protocol GClusterRenderer <NSObject>
 
-- (void)clustersChanged:(NSSet*)clusters;
+- (void)clustersChanged:(id <GClusterAlgorithm>)algo forZoom:(CGFloat)zoom;
+-(void)clearCache;
 
 @end

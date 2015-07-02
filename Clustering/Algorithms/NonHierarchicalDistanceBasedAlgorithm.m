@@ -9,6 +9,7 @@
     GQTPointQuadTree *_quadTree;
     NSInteger _maxDistanceAtZoom;
 }
+@synthesize maxDistanceAtZoom = _maxDistanceAtZoom;
 
 - (id)initWithMaxDistanceAtZoom:(NSInteger)aMaxDistanceAtZoom {
     if (self = [super init]) {
@@ -29,10 +30,21 @@
     [_quadTree add:quadItem];
 }
 
+- (void)removeItem:(id <GClusterItem>) item {
+    for (GQuadItem *quad in _items) {
+        if (quad.item == item)
+        {
+            [_items removeObject:quad];
+            [_quadTree remove:quad];
+            break;
+        }
+    }
+}
+
 - (void)removeItems
 {
-  [_items removeAllObjects];
-  [_quadTree clear];
+    [_items removeAllObjects];
+    [_quadTree clear];
 }
 
 - (void)removeItemsNotInRectangle:(CGRect)rect
@@ -40,12 +52,13 @@
     NSMutableArray *newItems = [[NSMutableArray alloc] init];
     [_quadTree clear];
     
-    for (GQuadItem *item in _items)
+    for (GQuadItem *item in _items) {
         if (CGRectContainsPoint(rect, CGPointMake(item.position.latitude, item.position.longitude)))
         {
             [newItems addObject:item];
             [_quadTree add:item];
         }
+    }
     
     _items = newItems;
 }
@@ -78,8 +91,7 @@
             continue;
         }
         
-        GStaticCluster *cluster = [[GStaticCluster alloc] initWithCoordinate:candidate.position andMarker:candidate.marker];
-        [results addObject:cluster];
+        GStaticCluster *cluster = [[GStaticCluster alloc] initWithCoordinate:candidate.position];
         
         for (GQuadItem* clusterItem in clusterItems) {
             if (clusterItem.hidden) continue;
@@ -99,7 +111,16 @@
             [cluster add:clusterItem];
             [itemToCluster setObject:cluster forKey:clusterItem];
         }
-        [visitedCandidates addObjectsFromArray:clusterItems];
+        if (cluster.items.count == 1) {
+            [results addObject:candidate];
+            [visitedCandidates addObject:candidate];
+            [distanceToCluster setObject:[NSNumber numberWithDouble:0] forKey:candidate];
+        } else {
+            [results addObject:cluster];
+            [cluster updateCenter];
+            [visitedCandidates addObjectsFromArray:clusterItems];
+        }
+        
     }
     
     return results;

@@ -4,6 +4,7 @@
 @protocol GClusterAlgorithm <NSObject>
 
 - (void)addItem:(id <GClusterItem>) item;
+- (void)removeItem:(id <GClusterItem>) item;
 - (void)removeItems;
 - (void)removeItemsNotInRectangle:(CGRect)rect;
 

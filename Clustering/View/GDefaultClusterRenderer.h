@@ -13,5 +13,6 @@
 @interface GDefaultClusterRenderer : NSObject <GClusterRenderer> 
 
 - (id)initWithMapView:(GMSMapView*)googleMap;
+-(void)clearCache;
 
 @end

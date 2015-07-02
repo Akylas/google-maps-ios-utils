@@ -2,6 +2,7 @@
 #import "GDefaultClusterRenderer.h"
 #import "GQuadItem.h"
 #import "GCluster.h"
+#import "GClusterAlgorithm.h"
 
 @implementation GDefaultClusterRenderer {
     GMSMapView *_map;
@@ -16,12 +17,19 @@
     return self;
 }
 
-- (void)clustersChanged:(NSSet*)clusters {
+
+-(void)clearCache {
     for (GMSMarker *marker in _markerCache) {
         marker.map = nil;
     }
     
     [_markerCache removeAllObjects];
+}
+
+- (void)clustersChanged:(id <GClusterAlgorithm>)algo forZoom:(CGFloat)zoom {
+    NSSet* clusters = [algo getClusters:zoom];
+
+    [self clearCache];
     
     for (id <GCluster> cluster in clusters) {
         GMSMarker *marker;
