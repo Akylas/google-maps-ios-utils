@@ -4,6 +4,11 @@
 #import "GClusterRenderer.h"
 #import "GQTPointQuadTreeItem.h"
 
+@interface GMSMarker(CanCluster)
+- (void)setCanBeClustered:(BOOL)value;
+- (BOOL)canBeClustered;
+@end
+
 @interface GClusterManager : NSObject <GMSMapViewDelegate> 
 
 @property(nonatomic, strong) GMSMapView *mapView;
@@ -17,8 +22,8 @@
 - (void)removeItemsNotInRectangle:(CGRect)rect;
 - (void)hideItemsNotInVisibleBounds;
 
-- (void)removeItem:(id <GClusterItem>) item;
-- (BOOL)containsItem:(id <GClusterItem>) item;
+- (void)removeItem:(id <GClusterItem>) item fromAlgorithm:(id <GClusterAlgorithm>)algo;
+-(BOOL)containsItem:(id<GClusterItem>)item inAlgorithm:(id <GClusterAlgorithm>)algo;
 - (void)cluster;
 -(void)clusterAlgo:(id <GClusterAlgorithm>)clusterAlgorithm;
 

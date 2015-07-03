@@ -19,5 +19,5 @@
 @property(nonatomic, assign) BOOL hidden;
 
 - (id <GClusterItem>)item;
--(void)updatePositionAndMarker;
+-(void)updatePosition;
 @end

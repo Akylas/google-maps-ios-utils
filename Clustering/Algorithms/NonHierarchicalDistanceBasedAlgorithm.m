@@ -3,6 +3,7 @@
 #import "GQTBounds.h"
 #import "GQTPoint.h"
 #import "GStaticCluster.h"
+#import "GClusterManager.h"
 #import "GQuadItem.h"
 
 @implementation NonHierarchicalDistanceBasedAlgorithm {
@@ -85,7 +86,7 @@
         if (![bounds containsCoordinate:item.position ]) {
             item.hidden = YES;
         }else{
-               item.hidden = NO;
+            item.hidden = NO;
         }
     }
 }
@@ -108,6 +109,13 @@
             continue;
         }
         
+        if (![candidate.marker canBeClustered]) {
+            [results addObject:candidate];
+            [visitedCandidates addObject:candidate];
+            [distanceToCluster setObject:[NSNumber numberWithDouble:0] forKey:candidate];
+            continue;
+        }
+        
         GQTBounds bounds = [self createBoundsFromSpan:candidate.point span:zoomSpecificSpan];
         NSArray *clusterItems  = [_quadTree searchWithBounds:bounds];
         if ([clusterItems count] == 1) {
@@ -121,7 +129,10 @@
         GStaticCluster *cluster = [[GStaticCluster alloc] initWithCoordinate:candidate.position];
         
         for (GQuadItem* clusterItem in clusterItems) {
-            if (clusterItem.hidden) continue;
+            if (clusterItem.hidden) {
+                clusterItem.marker.map =nil;
+                continue;
+            }
             NSNumber *existingDistance = [distanceToCluster objectForKey:clusterItem];
             double distance = [self distanceSquared:clusterItem.point :candidate.point];
             if (existingDistance != nil) {
@@ -133,9 +144,15 @@
                 // Move item to the closer cluster.
                 GStaticCluster *oldCluster = [itemToCluster objectForKey:clusterItem];
                 [oldCluster remove:clusterItem];
+                if (oldCluster.items.count == 1) {
+                    [results removeObject:oldCluster];
+                    [results addObject:[oldCluster.items anyObject]];
+                    [oldCluster removeAllItems];
+                }
             }
             [distanceToCluster setObject:[NSNumber numberWithDouble:distance] forKey:clusterItem];
             [cluster add:clusterItem];
+            clusterItem.marker.map =nil;
             [itemToCluster setObject:cluster forKey:clusterItem];
         }
         if (cluster.items.count == 1) {

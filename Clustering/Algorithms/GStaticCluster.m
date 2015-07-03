@@ -29,6 +29,9 @@
     return _items;
 }
 
+- (void)removeAllItems {
+    [_items removeAllObjects];
+}
 - (CLLocationCoordinate2D)position {
     return _position;
 }

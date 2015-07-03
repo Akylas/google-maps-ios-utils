@@ -1,5 +1,24 @@
 #import "GClusterManager.h"
 #import "GCluster.h"
+#import <objc/runtime.h>
+
+NSString * const kGMSMarkerClusterKey = @"kCanCluster";
+@implementation GMSMarker(CanCluster)
+- (void)setCanBeClustered:(BOOL )value
+{
+    objc_setAssociatedObject(self, (__bridge const void *)(kGMSMarkerClusterKey), @(value), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
+
+- (BOOL)canBeClustered
+{
+    id value = objc_getAssociatedObject(self, (__bridge const void *)(kGMSMarkerClusterKey));
+    if (value) {
+        return [value boolValue];
+    }
+    return true;
+}
+
+@end
 
 @implementation GClusterManager {
     CGFloat _zoom;
@@ -63,7 +82,13 @@
 }
 
 - (void)hideItemsNotInVisibleBounds{
-    GMSCoordinateBounds *bounds = [[GMSCoordinateBounds alloc]initWithRegion:self.mapView.projection.visibleRegion];
+    GMSCoordinateBounds* bounds = [[GMSCoordinateBounds alloc] initWithRegion: self.mapView.projection.visibleRegion];
+    CGFloat width_2 = bounds.northEast.longitude - bounds.southWest.longitude;
+    CGFloat height_2 = bounds.northEast.latitude - bounds.southWest.latitude;
+    bounds = [[GMSCoordinateBounds alloc]initWithCoordinate:
+                                                                      CLLocationCoordinate2DMake(bounds.northEast.latitude + height_2, bounds.northEast.longitude + width_2)
+                                                                      coordinate:
+                                   CLLocationCoordinate2DMake(bounds.southWest.latitude - height_2, bounds.southWest.longitude - width_2)];
     [_clusterAlgorithmSet enumerateObjectsUsingBlock:^(id <GClusterAlgorithm> set, BOOL *stop) {
         [set hideItemsNotInBounds:bounds];
     }];

@@ -10,6 +10,7 @@
 - (void)remove:(GQuadItem*)item;
 
 -(void)updateCenter;
+- (void)removeAllItems;
 
 //@property (nonatomic, strong) GMSMarker *marker;
 
