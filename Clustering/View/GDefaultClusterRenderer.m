@@ -20,13 +20,16 @@
 
 -(void)clearCache {
     for (GMSMarker *marker in _markerCache) {
+        if (_map.selectedMarker == marker) {
+            _map.selectedMarker = nil;
+        }
         marker.map = nil;
     }
     
     [_markerCache removeAllObjects];
 }
 
-- (void)clustersChanged:(id <GClusterAlgorithm>)algo forZoom:(CGFloat)zoom {
+- (void)clustersChanged:(GClusterAlgorithm*)algo forZoom:(CGFloat)zoom {
     NSSet* clusters = [algo getClusters:zoom];
 
     [self clearCache];

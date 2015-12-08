@@ -6,92 +6,35 @@
 #import "GClusterManager.h"
 #import "GQuadItem.h"
 
+/**
+ * A simple clustering algorithm with O(nlog n) performance. Resulting clusters are not
+ * hierarchical.
+ * <p/>
+ * High level algorithm:<br>
+ * 1. Iterate over items in the order they were added (candidate clusters).<br>
+ * 2. Create a cluster with the center of the item. <br>
+ * 3. Add all items that are within a certain distance to the cluster. <br>
+ * 4. Move any items out of an existing cluster if they are closer to another cluster. <br>
+ * 5. Remove those items from the list of candidate clusters.
+ * <p/>
+ * Clusters have the center of the first element (not the centroid of the items within it).
+ */
 @implementation NonHierarchicalDistanceBasedAlgorithm {
-    GQTPointQuadTree *_quadTree;
     NSInteger _maxDistanceAtZoom;
 }
 @synthesize maxDistanceAtZoom = _maxDistanceAtZoom;
 
 - (id)initWithMaxDistanceAtZoom:(NSInteger)aMaxDistanceAtZoom {
     if (self = [super init]) {
-        _items = [[NSMutableArray alloc] init];
-        _quadTree = [[GQTPointQuadTree alloc] initWithBounds:(GQTBounds){0,0,1,1}];
         _maxDistanceAtZoom = aMaxDistanceAtZoom;
     }
     return self;
 }
 
-- (id)init {
-    return [self initWithMaxDistanceAtZoom:50];
-}
-
-- (void)addItem:(id <GClusterItem>) item {
-    GQuadItem *quadItem = [[GQuadItem alloc] initWithItem:item];
-    [_items addObject:quadItem];
-    [_quadTree add:quadItem];
-}
-
-- (void)removeItem:(id <GClusterItem>) item{
-    NSSet *set = [NSSet setWithObject:item];
-    [self removeClusterItemsInSet:set];
-}
-- (void)removeClusterItemsInSet:(NSSet *)set {
-    NSMutableArray *toRemove = [NSMutableArray array];
-    [_items enumerateObjectsUsingBlock:^(GQuadItem *quadItem, NSUInteger idx, BOOL *stop) {
-        if ([set containsObject:quadItem.item]) {
-            [toRemove addObject:quadItem];
-        }
-    }];
-    [_items removeObjectsInArray:toRemove];
-    [toRemove enumerateObjectsUsingBlock:^(GQuadItem *quadItem, NSUInteger idx, BOOL *stop) {
-        [_quadTree remove:quadItem];
-    }];
-}
--(BOOL)containsItem:(id <GClusterItem>) item{
-    __block BOOL bFound = NO;
-    [_items enumerateObjectsUsingBlock:^(GQuadItem *quadItem, NSUInteger idx, BOOL *stop) {
-        if(quadItem.item == item){
-            bFound =  YES;
-            *stop = YES;
-        }
-    }];
-    return bFound;
-}
-
-- (void)removeItems
-{
-    [_items removeAllObjects];
-    [_quadTree clear];
-}
-
-- (void)removeItemsNotInRectangle:(CGRect)rect
-{
-    NSMutableArray *newItems = [[NSMutableArray alloc] init];
-    [_quadTree clear];
-    
-    for (GQuadItem *item in _items) {
-        if (CGRectContainsPoint(rect, CGPointMake(item.position.latitude, item.position.longitude)))
-        {
-            [newItems addObject:item];
-            [_quadTree add:item];
-        }
-    }
-    
-    _items = newItems;
-}
-
-- (void)hideItemsNotInBounds:(GMSCoordinateBounds*)bounds
-{
-    for (GQuadItem *item in _items){
-        if (![bounds containsCoordinate:item.position ]) {
-            item.hidden = YES;
-        }else{
-            item.hidden = NO;
-        }
-    }
-}
-
 - (NSSet*)getClusters:(float)zoom {
+    if ([self.items count] == 0) {
+        return nil;
+    }
     int discreteZoom = (int) zoom;
     
     double zoomSpecificSpan = _maxDistanceAtZoom / pow(2, discreteZoom) / 256;
@@ -101,8 +44,11 @@
     NSMutableDictionary *distanceToCluster = [[NSMutableDictionary alloc] init];
     NSMutableDictionary *itemToCluster = [[NSMutableDictionary alloc] init];
     
-    for (GQuadItem* candidate in _items) {
-        if (candidate.hidden) continue;
+    for (GQuadItem* candidate in self.items) {
+        if (candidate.hidden || candidate.marker.opacity == 0) {
+            candidate.marker.map =nil;
+            continue;
+        }
         
         if ([visitedCandidates containsObject:candidate]) {
             // Candidate is already part of another cluster.
@@ -117,7 +63,7 @@
         }
         
         GQTBounds bounds = [self createBoundsFromSpan:candidate.point span:zoomSpecificSpan];
-        NSArray *clusterItems  = [_quadTree searchWithBounds:bounds];
+        NSArray *clusterItems  = [self.quadTree searchWithBounds:bounds];
         if ([clusterItems count] == 1) {
             // Only the current marker is in range. Just add the single item to the results.
             [results addObject:candidate];
@@ -126,18 +72,21 @@
             continue;
         }
         
-        GStaticCluster *cluster = [[GStaticCluster alloc] initWithCoordinate:candidate.position];
+        GStaticCluster *cluster = [[GStaticCluster alloc] init];
         
         for (GQuadItem* clusterItem in clusterItems) {
-            if (clusterItem.hidden) {
+            if (clusterItem.hidden || candidate.marker.opacity == 0) {
                 clusterItem.marker.map =nil;
+                continue;
+            }
+            if (![clusterItem.marker canBeClustered]) {
                 continue;
             }
             NSNumber *existingDistance = [distanceToCluster objectForKey:clusterItem];
             double distance = [self distanceSquared:clusterItem.point :candidate.point];
             if (existingDistance != nil) {
                 // Item already belongs to another cluster. Check if it's closer to this cluster.
-                if ([existingDistance doubleValue] < distance) {
+                if ([existingDistance doubleValue] < distance || distance < 1) {
                     continue;
                 }
                 
@@ -161,7 +110,7 @@
             [distanceToCluster setObject:[NSNumber numberWithDouble:0] forKey:candidate];
         } else {
             [results addObject:cluster];
-            [cluster updateCenter];
+            [cluster update];
             [visitedCandidates addObjectsFromArray:clusterItems];
         }
         

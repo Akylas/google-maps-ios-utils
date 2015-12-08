@@ -3,11 +3,11 @@
 @implementation GStaticCluster {
     CLLocationCoordinate2D _position;
     NSMutableSet *_items;
+    GMSCoordinateBounds* _bounds;
 }
 
-- (id)initWithCoordinate:(CLLocationCoordinate2D)coordinate{
+- (id)init{
     if (self = [super init]) {
-        _position = coordinate;
         _items = [[NSMutableSet alloc] init];
     }
     return self;
@@ -28,6 +28,14 @@
 - (NSSet*)items {
     return _items;
 }
+- (NSInteger)count {
+    return _items.count;
+}
+
+- (GMSCoordinateBounds*)bounds {
+    return _bounds;
+}
+
 
 - (void)removeAllItems {
     [_items removeAllObjects];
@@ -37,31 +45,25 @@
 }
 
 
--(void)updateCenter {
-    float maxLat = -200;
-    float maxLong = -200;
-    float minLat = MAXFLOAT;
-    float minLong = MAXFLOAT;
+
+-(void)update {
+    
+    _bounds = nil;
+    GMSCoordinateBounds* bounds = nil;
+    _position = kCLLocationCoordinate2DInvalid;
     for (GQuadItem* item in _items) {
-        CLLocationCoordinate2D location = item.position;
-        if (location.latitude < minLat) {
-            minLat = location.latitude;
-        }
-        
-        if (location.longitude < minLong) {
-            minLong = location.longitude;
-        }
-        
-        if (location.latitude > maxLat) {
-            maxLat = location.latitude;
-        }
-        
-        if (location.longitude > maxLong) {
-            maxLong = location.longitude;
+        if (!bounds) {
+            bounds = [[GMSCoordinateBounds alloc] initWithCoordinate:item.position coordinate:item.position];
+        } else {
+            bounds = [bounds includingCoordinate:item.position];
         }
     }
+    if ([bounds isValid]) {
+        _bounds = bounds;
+        _position = CLLocationCoordinate2DMake(
+                                               (bounds.southWest.latitude + bounds.northEast.latitude) / 2,
+                                               (bounds.southWest.longitude + bounds.northEast.longitude) / 2);
+    }
     
-    _position = CLLocationCoordinate2DMake((maxLat + minLat) * 0.5, (maxLong + minLong) * 0.5);
 }
-
 @end

@@ -31,7 +31,7 @@ NSString * const kGMSMarkerClusterKey = @"kCanCluster";
 }
 
 
-- (void)addClusterAlgorithm:(id <GClusterAlgorithm>)algo {
+- (void)addClusterAlgorithm:(GClusterAlgorithm*)algo {
     if (_clusterAlgorithmSet == nil) {
         _clusterAlgorithmSet = [NSMutableSet set];
     }
@@ -39,7 +39,7 @@ NSString * const kGMSMarkerClusterKey = @"kCanCluster";
     [self clusterAlgo:algo];
 }
 
-- (void)removeClusterAlgorithm:(id <GClusterAlgorithm>)clusterAlgorithm {
+- (void)removeClusterAlgorithm:(GClusterAlgorithm*)clusterAlgorithm {
     if (_clusterAlgorithmSet != nil) {
         [_clusterAlgorithmSet removeObject:clusterAlgorithm];
     }
@@ -51,66 +51,74 @@ NSString * const kGMSMarkerClusterKey = @"kCanCluster";
     _clusterRenderer = clusterRenderer;
 }
 
-- (void)addItem:(id <GClusterItem>) item inAlgorithm:(id <GClusterAlgorithm>)algo {
-    [algo addItem:item];
+- (void)addItem:(id <GClusterItem>) item inAlgorithm:(GClusterAlgorithm*)algo {
+    [algo addItem:item inBounds:[self visibleBounds]];
 }
 
-- (void)removeItem:(id <GClusterItem>) item fromAlgorithm:(id <GClusterAlgorithm>)algo {
+- (void)addItems:(NSArray*) items inAlgorithm:(GClusterAlgorithm*)algo {
+    [algo addItems:items inBounds:[self visibleBounds]];
+}
+
+- (void)removeItem:(id <GClusterItem>) item fromAlgorithm:(GClusterAlgorithm*)algo {
     [algo removeItem:item];
 }
 
--(BOOL)containsItem:(id<GClusterItem>)item inAlgorithm:(id <GClusterAlgorithm>)algo{
+-(BOOL)containsItem:(id<GClusterItem>)item inAlgorithm:(GClusterAlgorithm*)algo{
     return [algo containsItem:item];
 }
 
 - (void)removeItems {
-    [_clusterAlgorithmSet enumerateObjectsUsingBlock:^(id <GClusterAlgorithm> set, BOOL *stop) {
+    [_clusterAlgorithmSet enumerateObjectsUsingBlock:^(GClusterAlgorithm* set, BOOL *stop) {
         [set removeItems];
     }];
     [_clusterRenderer clearCache];
 }
 
 - (void)removeItemsNotInRectangle:(CGRect)rect {
-    [_clusterAlgorithmSet enumerateObjectsUsingBlock:^(id <GClusterAlgorithm> set, BOOL *stop) {
+    [_clusterAlgorithmSet enumerateObjectsUsingBlock:^(GClusterAlgorithm* set, BOOL *stop) {
         [set removeItemsNotInRectangle:rect];
     }];
 }
 
--(void)clusterAlgo:(id <GClusterAlgorithm>)clusterAlgorithm
+-(void)clusterAlgo:(GClusterAlgorithm*)clusterAlgorithm
 {
     [_clusterRenderer clustersChanged:clusterAlgorithm forZoom:_zoom];
 }
 
-- (void)hideItemsNotInVisibleBounds{
+-(GMSCoordinateBounds*)visibleBounds
+{
     GMSCoordinateBounds* bounds = [[GMSCoordinateBounds alloc] initWithRegion: self.mapView.projection.visibleRegion];
-    CGFloat width_2 = bounds.northEast.longitude - bounds.southWest.longitude;
-    CGFloat height_2 = bounds.northEast.latitude - bounds.southWest.latitude;
+    CLLocationCoordinate2D northEast = bounds.northEast;
+    CLLocationCoordinate2D southWest = bounds.southWest;
+    CGFloat width_2 = (northEast.longitude - southWest.longitude)/2;
+    CGFloat height_2 = (northEast.latitude - southWest.latitude)/2;
+//    CGFloat width_2 = 0;
+//    CGFloat height_2 = 0;
     bounds = [[GMSCoordinateBounds alloc]initWithCoordinate:
-                                                                      CLLocationCoordinate2DMake(bounds.northEast.latitude + height_2, bounds.northEast.longitude + width_2)
-                                                                      coordinate:
-                                   CLLocationCoordinate2DMake(bounds.southWest.latitude - height_2, bounds.southWest.longitude - width_2)];
-    [_clusterAlgorithmSet enumerateObjectsUsingBlock:^(id <GClusterAlgorithm> set, BOOL *stop) {
-        [set hideItemsNotInBounds:bounds];
+              CLLocationCoordinate2DMake(northEast.latitude + height_2, northEast.longitude + width_2)
+                                                 coordinate:
+              CLLocationCoordinate2DMake(southWest.latitude - height_2, southWest.longitude - width_2)];
+    return bounds;
+}
+
+- (void)hideItemsNotInVisibleBounds{
+   
+    GMSCoordinateBounds* bounds = [self visibleBounds];
+    [_clusterAlgorithmSet enumerateObjectsUsingBlock:^(GClusterAlgorithm* set, BOOL *stop) {
+        [set hideItemsNotInBounds:bounds forZoom:_zoom];
     }];
     [self cluster];
 }
 
 - (void)cluster {
     _zoom = floorf(self.mapView.camera.zoom);
-    [_clusterAlgorithmSet enumerateObjectsUsingBlock:^(id <GClusterAlgorithm> set, BOOL *stop) {
+    [_clusterAlgorithmSet enumerateObjectsUsingBlock:^(GClusterAlgorithm* set, BOOL *stop) {
         [self clusterAlgo:set];
     }];
 }
 
 
 #pragma mark mapview delegate
-
--(void)mapView:(GMSMapView *)mapView willMove:(BOOL)gesture {
-    if ([self delegate] != nil
-        && [self.delegate respondsToSelector:@selector(mapView:willMove:)]) {
-        [self.delegate mapView:mapView willMove:gesture];
-    }
-}
 
 - (void)mapView:(GMSMapView *)mapView didChangeCameraPosition:(GMSCameraPosition *)cameraPosition {
     
@@ -124,10 +132,6 @@ NSString * const kGMSMarkerClusterKey = @"kCanCluster";
                                                  selector:@selector(hideItemsNotInVisibleBounds) object:nil];
         [self performSelector:@selector(hideItemsNotInVisibleBounds) withObject:nil afterDelay:0.3];
     }
-    if ([self delegate] != nil
-        && [self.delegate respondsToSelector:@selector(mapView:didChangeCameraPosition:)]) {
-        [self.delegate mapView:mapView didChangeCameraPosition:cameraPosition];
-    }
 }
 
 - (void)mapView:(GMSMapView *)mapView idleAtCameraPosition:(GMSCameraPosition *)cameraPosition {
@@ -139,87 +143,6 @@ NSString * const kGMSMarkerClusterKey = @"kCanCluster";
         _zoom = newZoom;
         
         [self cluster];
-    }
-    
-    if ([self delegate] != nil
-        && [self.delegate respondsToSelector:@selector(mapView:idleAtCameraPosition:)]) {
-        [self.delegate mapView:mapView idleAtCameraPosition:cameraPosition];
-    }
-}
-
--(void)mapView:(GMSMapView *)mapView didTapAtCoordinate:(CLLocationCoordinate2D)coordinate {
-    if ([self delegate] != nil
-        && [self.delegate respondsToSelector:@selector(mapView:didTapAtCoordinate:)]) {
-        [self.delegate mapView:mapView didTapAtCoordinate:coordinate];
-    }
-}
-
--(void)mapView:(GMSMapView *)mapView didLongPressAtCoordinate:(CLLocationCoordinate2D)coordinate {
-    if ([self delegate] != nil
-        && [self.delegate respondsToSelector:@selector(mapView:didLongPressAtCoordinate:)]) {
-        [self.delegate mapView:mapView didLongPressAtCoordinate:coordinate];
-    }
-}
-
-- (BOOL)mapView:(GMSMapView *)mapView didTapMarker:(GMSMarker *)marker {
-    if ([self delegate] != nil
-        && [self.delegate respondsToSelector:@selector(mapView:didTapMarker:)]) {
-        return [self.delegate mapView:mapView didTapMarker:marker];
-    }
-    
-    return true;
-}
-
-- (void)mapView:(GMSMapView *)mapView didTapInfoWindowOfMarker:(GMSMarker *)marker {
-    if ([self delegate] != nil
-        && [self.delegate respondsToSelector:@selector(mapView:didTapInfoWindowOfMarker:)]) {
-        [self.delegate mapView:mapView didTapInfoWindowOfMarker:marker];
-    }
-}
-
-- (void)mapView:(GMSMapView *)mapView didTapOverlay:(GMSOverlay *)overlay {
-    if ([self delegate] != nil
-        && [self.delegate respondsToSelector:@selector(mapView:didTapOverlay:)]) {
-        [self.delegate mapView:mapView didTapOverlay:overlay];
-    }
-}
-
-- (UIView *)mapView:(GMSMapView *)mapView markerInfoWindow:(GMSMarker *)marker {
-    if ([self delegate] != nil
-        && [self.delegate respondsToSelector:@selector(mapView:markerInfoWindow:)]) {
-        return [self.delegate mapView:mapView markerInfoWindow:marker];
-    }
-    
-    return nil;
-}
-
-- (UIView *)mapView:(GMSMapView *)mapView markerInfoContents:(GMSMarker *)marker {
-    if ([self delegate] != nil
-        && [self.delegate respondsToSelector:@selector(mapView:markerInfoContents:)]) {
-        return [self.delegate mapView:mapView markerInfoContents:marker];
-    }
-    
-    return nil;
-}
-
-- (void)mapView:(GMSMapView *)mapView didBeginDraggingMarker:(GMSMarker *)marker {
-    if ([self delegate] != nil
-        && [self.delegate respondsToSelector:@selector(mapView:didBeginDraggingMarker:)]) {
-        [self.delegate mapView:mapView didBeginDraggingMarker:marker];
-    }
-}
-
--(void)mapView:(GMSMapView *)mapView didEndDraggingMarker:(GMSMarker *)marker {
-    if ([self delegate] != nil
-        && [self.delegate respondsToSelector:@selector(mapView:didEndDraggingMarker:)]) {
-        [self.delegate mapView:mapView didEndDraggingMarker:marker];
-    }
-}
-
-- (void)mapView:(GMSMapView *)mapView didDragMarker:(GMSMarker *)marker {
-    if ([self delegate] != nil
-        && [self.delegate respondsToSelector:@selector(mapView:didDragMarker:)]) {
-        [self.delegate mapView:mapView didDragMarker:marker];
     }
 }
 

@@ -4,13 +4,16 @@
 
 @interface GStaticCluster : NSObject <GCluster> 
 
-- (id)initWithCoordinate:(CLLocationCoordinate2D)coordinate;
+- (id)init;
 
 - (void)add:(GQuadItem*)item;
 - (void)remove:(GQuadItem*)item;
 
--(void)updateCenter;
+-(void)update;
 - (void)removeAllItems;
+- (GMSCoordinateBounds*)bounds;
+- (NSSet*)items;
+- (NSInteger)count;
 
 //@property (nonatomic, strong) GMSMarker *marker;
 

@@ -12,7 +12,7 @@
 
 @protocol GClusterRenderer <NSObject>
 
-- (void)clustersChanged:(id <GClusterAlgorithm>)algo forZoom:(CGFloat)zoom;
+- (void)clustersChanged:(GClusterAlgorithm*)algo forZoom:(CGFloat)zoom;
 -(void)clearCache;
 
 @end
